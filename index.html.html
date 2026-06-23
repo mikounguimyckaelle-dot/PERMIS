@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Permis — Révisions</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--white:#fff;--ink:#1a1a1a;--muted:#888;--border:#e0ddd6;
+  --vi:#4a7cf6;--qser:#e8a020;--sec:#2daa72;
+  --easy:#5ab55a;--good:#4a7cf6;--hard:#e8972a;--again:#d94f3d;
+  --radius:18px;
+}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 18px 10px;background:var(--white);border-bottom:1px solid var(--border)}
+.hdr-title{font-size:15px;font-weight:700}
+.hdr-stats{display:flex;gap:10px}
+.stat{font-size:13px;font-weight:600;color:var(--muted)}
+.stat span{color:var(--ink)}
+.prog-wrap{height:3px;background:var(--border)}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--vi),var(--sec));transition:width .4s ease}
+
+/* DECK */
+.deck{height:calc(100vh - 56px - 3px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 14px;gap:12px}
+
+/* CARD */
+.card-wrap{width:100%;max-width:480px;perspective:1200px;flex:1;max-height:calc(100vh - 190px)}
+.card{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1);cursor:pointer}
+.card.flipped{transform:rotateX(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.07);display:flex;flex-direction:column;overflow:hidden}
+.face-back{transform:rotateX(180deg)}
+
+/* FRONT */
+.card-counter{padding:12px 16px 0;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.card-questions{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.q-row{display:flex;flex-direction:column;gap:4px}
+.q-tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:2px 7px;border-radius:4px;align-self:flex-start}
+.t-vi{background:rgba(74,124,246,.12);color:var(--vi)}
+.t-qser{background:rgba(232,160,32,.15);color:var(--qser)}
+.t-sec{background:rgba(45,170,114,.12);color:var(--sec)}
+.q-text{font-size:15px;font-weight:500;line-height:1.5;color:var(--ink)}
+.card-hint{padding:8px 16px 12px;text-align:center;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.card-hint::before,.card-hint::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* BACK */
+.card-answers{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.a-block{display:flex;flex-direction:column;gap:3px}
+.a-tag{font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:2px 7px;border-radius:4px;align-self:flex-start}
+.a-q{font-size:11px;color:var(--muted);line-height:1.4;font-style:italic}
+.a-text{font-size:14px;font-weight:600;line-height:1.5;color:var(--ink)}
+.a-divider{height:1px;background:var(--border);margin:2px 0}
+.back-hint{padding:6px 16px 10px;text-align:center;font-size:12px;color:var(--muted)}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;width:100%;max-width:480px}
+.judge-btn{flex:1;border:none;border-radius:12px;padding:13px 4px 10px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .12s,opacity .12s;opacity:.3;pointer-events:none}
+.judge-btn.active{opacity:1;pointer-events:auto}
+.judge-btn:active{transform:scale(.95)}
+.judge-btn .pts{font-size:10px;font-weight:500;opacity:.75}
+.btn-encore{background:#fdecea;color:var(--again)}
+.btn-difficile{background:#fff3e0;color:var(--hard)}
+.btn-bon{background:#e8f0ff;color:var(--good)}
+.btn-facile{background:#e8f5e8;color:var(--easy)}
+
+/* RESULT */
+.result{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:28px 20px;height:calc(100vh - 59px)}
+.result.show{display:flex}
+.result-circle{width:120px;height:120px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.result-pct{font-size:34px;font-weight:700;line-height:1}
+.result-label{font-size:12px;color:var(--muted);margin-top:2px}
+.result-title{font-size:24px;font-weight:700}
+.result-sub{color:var(--muted);font-size:14px;margin-top:-10px}
+.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:300px}
+.res-pill{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:12px}
+.res-pill .v{font-size:22px;font-weight:700}
+.res-pill .l{font-size:11px;color:var(--muted);margin-top:2px}
+.res-pill.easy .v{color:var(--easy)}.res-pill.good .v{color:var(--good)}.res-pill.hard .v{color:var(--hard)}.res-pill.again .v{color:var(--again)}
+.restart-btn{background:var(--ink);color:#fff;border:none;border-radius:12px;padding:14px 36px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer}
+
+/* INTRO */
+.intro{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;height:calc(100vh - 59px);padding:24px 20px;text-align:center}
+.intro h1{font-size:26px;font-weight:700;line-height:1.2}
+.intro h1 em{font-style:normal;color:var(--vi)}
+.intro p{font-size:14px;color:var(--muted);line-height:1.6;max-width:340px}
+.legend{display:flex;flex-direction:column;gap:7px;width:100%;max-width:300px}
+.legend-row{display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:500}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.legend-pts{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+.start-btn{background:var(--ink);color:#fff;border:none;border-radius:12px;padding:14px 40px;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="hdr" id="hdr" style="display:none">
+  <div class="hdr-title">Permis — Révisions</div>
+  <div class="hdr-stats">
+    <div class="stat">Bloc <span id="hdrIdx">1</span>/<span id="hdrTotal">33</span></div>
+    <div class="stat">Score <span id="hdrScore">0</span></div>
+  </div>
+</div>
+<div class="prog-wrap" id="progWrap" style="display:none"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+<!-- INTRO -->
+<div class="intro" id="introScreen">
+  <h1>Révisions<br><em>Permis de Conduire</em></h1>
+  <p>33 blocs uniques · questions exactes du PDF DSR/BRPCE<br>Lis, réponds dans ta tête, retourne la carte.</p>
+  <div class="legend">
+    <div class="legend-row"><div class="legend-dot" style="background:var(--easy)"></div>Facile — bien su<div class="legend-pts">+4 pts</div></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--good)"></div>Bon — à peu près su<div class="legend-pts">+2 pts</div></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--hard)"></div>Difficile — hésitation<div class="legend-pts">+1 pt</div></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--again)"></div>Encore — pas su<div class="legend-pts">0 pt</div></div>
+  </div>
+  <button class="start-btn" onclick="startDeck()">Commencer →</button>
+</div>
+
+<!-- DECK -->
+<div class="deck" id="deckScreen" style="display:none">
+  <div class="card-wrap">
+    <div class="card" id="theCard" onclick="flipCard()">
+      <div class="face face-front">
+        <div class="card-counter" id="cardCounter"></div>
+        <div class="card-questions" id="frontQuestions"></div>
+        <div class="card-hint">Appuie pour voir les réponses</div>
+      </div>
+      <div class="face face-back">
+        <div class="card-counter" id="cardCounterBack"></div>
+        <div class="card-answers" id="backAnswers"></div>
+        <div class="back-hint">Comment tu t'en es sorti·e ?</div>
+      </div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="judge-btn btn-encore" id="btnEncore" onclick="judge(0,'encore')">Encore<span class="pts">0 pt</span></button>
+    <button class="judge-btn btn-difficile" id="btnDifficile" onclick="judge(1,'difficile')">Difficile<span class="pts">+1 pt</span></button>
+    <button class="judge-btn btn-bon" id="btnBon" onclick="judge(2,'bon')">Bon<span class="pts">+2 pts</span></button>
+    <button class="judge-btn btn-facile" id="btnFacile" onclick="judge(4,'facile')">Facile<span class="pts">+4 pts</span></button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="result" id="resultScreen">
+  <div class="result-circle" id="resultCircle"></div>
+  <div><div class="result-title" id="resultTitle"></div><div class="result-sub" id="resultSub"></div></div>
+  <div class="result-grid">
+    <div class="res-pill easy"><div class="v" id="resEasy">0</div><div class="l">Facile</div></div>
+    <div class="res-pill good"><div class="v" id="resGood">0</div><div class="l">Bon</div></div>
+    <div class="res-pill hard"><div class="v" id="resHard">0</div><div class="l">Difficile</div></div>
+    <div class="res-pill again"><div class="v" id="resAgain">0</div><div class="l">Encore</div></div>
+  </div>
+  <button class="restart-btn" onclick="restart()">Recommencer</button>
+</div>
+
+<script>
+// ── DONNÉES EXACTES DU PDF DSR/BRPCE ─────────────────────────
+// Chaque bloc : { num, qs: [ {tag, q, a}, {tag, q, a}, {tag, q, a} ] }
+// tag VI/VE = vérification, QSER = sécurité routière, 1ers S = premiers secours
+const blocks = [
+{num:"01",qs:[
+ {tag:"VI",q:"Montrez la commande de réglage de hauteur des feux.",a:"Dispositif situé en général à gauche du volant."},
+ {tag:"QSER",q:"Pourquoi doit-on régler la hauteur des feux ?",a:"Pour ne pas éblouir les autres usagers."},
+ {tag:"1ers S",q:"01 — Comment et pourquoi protéger une zone de danger en cas d'accident de la route ?",a:"En délimitant clairement et largement la zone de danger de façon visible pour protéger les victimes et éviter un sur-accident."}
+]},
+{num:"02",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le remplissage du produit lave-glace.",a:"Le candidat ouvre le capot et montre le bocal."},
+ {tag:"QSER",q:"Pourquoi est-il préférable d'utiliser un liquide spécial en hiver ?",a:"Pour éviter le gel du liquide."},
+ {tag:"1ers S",q:"02 — Quels comportements adopter en cas de diffusion du signal d'alerte du Système d'Alerte et d'Information des Populations (SAIP) ?",a:"- Se mettre en sécurité.\n- S'informer grâce aux médias et sites internet des autorités dès que leur consultation est possible.\n- Respecter les consignes des autorités."}
+]},
+{num:"03",qs:[
+ {tag:"VI",q:"Mettez le rétroviseur intérieur en position « nuit ».",a:"Si le rétroviseur de l'accompagnateur gène la manipulation du dispositif, l'explication suffit. Si le véhicule possède un système automatique de mise en position « nuit » du rétroviseur intérieur, le candidat l'indique."},
+ {tag:"QSER",q:"Quel est l'intérêt de la position nuit ?",a:"Ne pas être ébloui par les feux du véhicule suiveur."},
+ {tag:"1ers S",q:"(suite 03) — Comment est composé le signal d'alerte du SAIP diffusé par les sirènes ?",a:"Il se compose de deux codes distincts :\n- le Signal National d'Alerte (SNA), variation du signal sur trois cycles successifs.\n- Le signal de fin d'alerte, signal continu."}
+]},
+{num:"04",qs:[
+ {tag:"VE",q:"Contrôlez l'état du flanc sur l'un des pneumatiques.",a:"En bon état (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Citez un endroit où l'on peut trouver les pressions préconisées pour les pneumatiques ?",a:"Elles sont indiquées :\n- soit sur une plaque sur une portière.\n- soit dans la notice d'utilisation du véhicule.\n- soit au niveau de la trappe à carburant."},
+ {tag:"1ers S",q:"04 — Sur autoroute, comment indiquer avec précision les lieux de l'accident depuis un téléphone portable ?",a:"En indiquant le numéro de l'autoroute, le sens de circulation et le point kilométrique."}
+]},
+{num:"05",qs:[
+ {tag:"VI",q:"Faites fonctionner les essuie-glaces avants du véhicule sur la position la plus rapide.",a:"(Le candidat actionne la commande des essuie-glaces sur la vitesse maximale.)"},
+ {tag:"QSER",q:"Comment détecter leur usure en circulation ?",a:"En cas de pluie, lorsqu'ils laissent des traces sur le pare-brise."},
+ {tag:"1ers S",q:"05 — Comment vérifier la respiration d'une victime ?",a:"Regarder si le ventre et la poitrine se soulèvent et sentir de l'air à l'expiration."}
+]},
+{num:"06",qs:[
+ {tag:"VE",q:"Vérifiez l'état et la propreté des plaques d'immatriculation.",a:"Vérification des plaques à l'avant et à l'arrière, propres et en bon état (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelles sont les précautions à prendre en cas d'installation d'un porte vélo ?",a:"La plaque d'immatriculation et les feux doivent être visibles."},
+ {tag:"1ers S",q:"06 — Qu'est-ce qu'une perte de connaissance ?",a:"C'est lorsque la victime ne répond pas et ne réagit pas mais respire."}
+]},
+{num:"07",qs:[
+ {tag:"VI",q:"Vérifiez la présence du gilet de haute visibilité.",a:"Le candidat doit indiquer où il se trouve sans obligation de le sortir."},
+ {tag:"QSER",q:"En cas de panne ou d'accident, quel autre accessoire de sécurité est obligatoire ?",a:"Le triangle de pré-signalisation."},
+ {tag:"1ers S",q:"07 — Si un dégagement d'urgence de la victime est nécessaire, où doit-elle être déplacée ?",a:"Dans un endroit suffisamment éloigné du danger et de ses conséquences."}
+]},
+{num:"08",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le contrôle du niveau du liquide de frein.",a:"Le candidat montre que le niveau est entre le mini et le maxi."},
+ {tag:"QSER",q:"Quelle est la conséquence d'un niveau insuffisant du liquide de frein ?",a:"Une perte d'efficacité du freinage."},
+ {tag:"1ers S",q:"08 — En cas de panne ou d'accident, quel équipement de sécurité doit être porté avant de quitter le véhicule ?",a:"Il faut porter le gilet de haute visibilité avant de sortir du véhicule."}
+]},
+{num:"09",qs:[
+ {tag:"VI",q:"Vérifiez la présence du certificat d'immatriculation du véhicule (ou carte grise).",a:"La photocopie est acceptée."},
+ {tag:"QSER",q:"Quels sont les deux autres documents obligatoires à présenter en cas de contrôle par les forces de l'ordre ?",a:"L'attestation d'assurance et le permis de conduire."},
+ {tag:"1ers S",q:"09 — Pourquoi l'alerte auprès des services de secours doit-elle être rapide et précise ?",a:"Pour permettre aux services de secours d'apporter les moyens adaptés aux victimes dans le délai le plus court."}
+]},
+{num:"10",qs:[
+ {tag:"VE",q:"Contrôlez l'état de tous les balais d'essuie-glace du véhicule.",a:"(Vérification de l'état de tous les balais.)"},
+ {tag:"QSER",q:"Quel est le risque de circuler avec des balais d'essuie-glace défectueux ?",a:"Une mauvaise visibilité en cas d'intempéries."},
+ {tag:"1ers S",q:"10 — Quels sont les numéros d'urgence à composer ?",a:"- Le 18, numéro d'appel des sapeurs-pompiers.\n- Le 15, numéro d'appel des SAMU.\n- Le 112, numéro de téléphone réservé aux appels d'urgence et valide dans l'ensemble de l'Union Européenne."}
+]},
+{num:"11",qs:[
+ {tag:"VI",q:"Montrez l'indicateur de niveau de carburant.",a:"(Sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quelles sont les précautions à prendre lors du remplissage du réservoir ?",a:"Arrêter le moteur, ne pas fumer, ne pas téléphoner."},
+ {tag:"1ers S",q:"(suite 11) — Quels comportements adopter en présence d'une victime qui ne répond pas et ne réagit pas, mais respire ?",a:"- La placer en position stable sur le côté ou position latérale de sécurité.\n- Alerter les secours.\n- Surveiller la respiration de la victime jusqu'à l'arrivée des secours."}
+]},
+{num:"12",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le remplissage du liquide de refroidissement.",a:"Le candidat ouvre le capot et montre le bocal."},
+ {tag:"QSER",q:"Quel est le danger si l'on complète le niveau du liquide lorsque le moteur est chaud ?",a:"Un risque de brûlure."},
+ {tag:"1ers S",q:"12 — Comment arrêter une hémorragie ?",a:"En appuyant fortement sur l'endroit qui saigne avec les doigts ou avec la paume de la main en mettant un tissu propre sur la plaie."}
+]},
+{num:"13",qs:[
+ {tag:"VI",q:"Actionnez le dégivrage de la lunette arrière et montrez le voyant ou le repère correspondant.",a:"(Le candidat actionne la commande et montre le voyant allumé.)"},
+ {tag:"QSER",q:"Quelle peut être la conséquence d'une panne de dégivrage de la lunette arrière ?",a:"Une insuffisance ou une absence de visibilité vers l'arrière."},
+ {tag:"1ers S",q:"13 — Hors autoroute ou endroit dangereux, en cas de panne ou d'accident, où doit être placé le triangle de pré-signalisation ?",a:"Le triangle de pré-signalisation doit être placé à une distance d'environ 30 m de la panne ou de l'accident, ou avant un virage, ou un sommet de côte."}
+]},
+{num:"14",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement de tous les clignotants côté trottoir.",a:"Vérification des clignotants propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est la signification d'un clignotement plus rapide ?",a:"Non fonctionnement de l'une des ampoules."},
+ {tag:"1ers S",q:"14 — Quelles sont les conditions pour réaliser le dégagement d'urgence d'une victime en présence d'un danger réel, immédiat et non contrôlable ?",a:"La victime doit être visible, facile à atteindre et rien ne doit gêner son dégagement. Il faut être sûr(e) de pouvoir réaliser le dégagement de la victime."}
+]},
+{num:"15",qs:[
+ {tag:"VI",q:"Montrez le voyant d'alerte signalant une pression insuffisante d'huile dans le moteur.",a:"(Voyant rouge en forme de bidon d'huile sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quelles sont les conditions à respecter pour contrôler le niveau d'huile ?",a:"Moteur froid et sur un terrain plat."},
+ {tag:"1ers S",q:"15 — Quelles sont les trois informations à transmettre aux services de secours ?",a:"Le numéro de téléphone à partir duquel l'appel est émis, la nature et la localisation la plus précise du problème."}
+]},
+{num:"16",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement du ou des feux de brouillard arrière.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Dans quels cas les utilise-t-on ?",a:"Par temps de brouillard et neige."},
+ {tag:"1ers S",q:"16 — Par quels moyens doit être réalisée l'alerte des secours ?",a:"L'alerte doit être donnée à l'aide d'un téléphone portable ou, à défaut, d'un téléphone fixe ou d'une borne d'appel d'urgence."}
+]},
+{num:"17",qs:[
+ {tag:"VI",q:"Vérifiez la présence de l'éthylotest.",a:"(Le candidat indique où il se trouve dans le véhicule.)"},
+ {tag:"QSER",q:"A partir de quel taux d'alcoolémie, en période de permis probatoire, est-on en infraction ?",a:"0,2 g/l, c'est-à-dire 0 verre, car dès le 1er verre ce seuil peut être dépassé."},
+ {tag:"1ers S",q:"17 — Quel comportement doit-on adopter en présence d'une victime en arrêt cardiaque ?",a:"- ALERTER : alerter immédiatement les secours.\n- MASSER : pratiquer une réanimation cardio-pulmonaire.\n- DEFIBRILLER : utiliser un défibrillateur automatique (DAE) si possible."}
+]},
+{num:"18",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de détresse à l'avant et à l'arrière.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Dans quels cas doit-on les utiliser ?",a:"En cas de panne, d'accident ou de ralentissement important."},
+ {tag:"1ers S",q:"18 — Dans quel cas peut-on positionner une victime en Position Latérale de Sécurité (PLS) ?",a:"Si la victime ne répond pas, ne réagit pas et respire."}
+]},
+{num:"19",qs:[
+ {tag:"VI",q:"Montrez la commande de réglage du volant.",a:"Le candidat montre l'emplacement. Il ne lui est pas demandé de changer son réglage."},
+ {tag:"QSER",q:"Pourquoi est-il important de bien régler son volant ? Citez deux exemples.",a:"- Le confort de conduite.\n- L'accessibilité aux commandes.\n- La visibilité du tableau de bord.\n- L'efficacité des airbags."},
+ {tag:"1ers S",q:"19 — Dans quelle situation peut-on déplacer une victime ?",a:"En présence d'un danger réel, immédiat, non contrôlable. Le déplacement de la victime doit rester exceptionnel."}
+]},
+{num:"20",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de route.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Citez un cas d'utilisation de l'appel lumineux.",a:"- Pour avertir de son approche.\n- En cas de danger.\n- A la place de l'avertisseur sonore."},
+ {tag:"1ers S",q:"20 — En cas de panne ou d'accident, quel équipement de sécurité doit être porté avant de quitter le véhicule ?",a:"Il faut porter le gilet de haute visibilité avant de sortir du véhicule."}
+]},
+{num:"21",qs:[
+ {tag:"VI",q:"Positionnez la commande pour diriger l'air vers le pare-brise.",a:"La position auto (désembuage automatique) peut être utilisée si le véhicule en est équipé."},
+ {tag:"QSER",q:"Citez deux éléments complémentaires permettant un désembuage efficace.",a:"- La commande de vitesse de ventilation.\n- La commande d'air chaud.\n- La climatisation."},
+ {tag:"1ers S",q:"21 — Quel est l'objectif du Signal d'Alerte et d'Information des Populations (SAIP) ?",a:"Avertir la population d'un danger imminent ou qu'un événement grave est en train de se produire."}
+]},
+{num:"22",qs:[
+ {tag:"VE",q:"Montrez où doit s'effectuer le contrôle du niveau d'huile moteur.",a:"Le candidat montre la jauge. Pas de manipulation exigée."},
+ {tag:"QSER",q:"Quel est le principal risque d'un manque d'huile moteur ?",a:"Un risque de détérioration ou de casse du moteur."},
+ {tag:"1ers S",q:"22 — Comment est diffusée l'alerte émise par le Signal d'Alerte et d'Information aux Populations (SAIP) ?",a:"Grâce aux sirènes, aux médias tels que Radio France et France Télévision ou encore grâce à l'application SAIP."}
+]},
+{num:"23",qs:[
+ {tag:"VI",q:"Montrez le voyant d'alerte signalant un défaut de batterie.",a:"(Voyant rouge en forme de batterie avec les bornes + et – sur le tableau de bord.)"},
+ {tag:"QSER",q:"Qu'est-ce qui peut provoquer la décharge de la batterie, moteur éteint ?",a:"Les feux ou accessoires électriques en fonctionnement."},
+ {tag:"1ers S",q:"23 — A partir de quel âge peut-on suivre une formation aux premiers secours ?",a:"A partir de 10 ans."}
+]},
+{num:"24",qs:[
+ {tag:"VE",q:"Montrez l'emplacement de la batterie du véhicule.",a:"(Le candidat ouvre le capot et montre la batterie.)"},
+ {tag:"QSER",q:"Quelle est la solution en cas de panne de batterie pour démarrer le véhicule sans le déplacer ?",a:"Brancher une deuxième batterie en parallèle (ou les « + » ensemble et les « - » ensemble) ou la remplacer."},
+ {tag:"1ers S",q:"24 — Pourquoi faut-il pratiquer immédiatement une réanimation cardio-pulmonaire sur une victime en arrêt cardiaque ?",a:"Car les lésions du cerveau surviennent dès les premières minutes."}
+]},
+{num:"25",qs:[
+ {tag:"VI",q:"De quelle couleur est le voyant qui indique une défaillance du système de freinage ?",a:"Rouge."},
+ {tag:"QSER",q:"Quel est le risque de circuler avec un frein de parking mal desserré ?",a:"Une dégradation du système de freinage."},
+ {tag:"1ers S",q:"25 — Hors autoroute ou endroit dangereux, en cas de panne ou d'accident, où doit être placé le triangle de pré-signalisation ?",a:"Le triangle de pré-signalisation doit être placé à une distance d'environ 30 m de la panne ou de l'accident, ou avant un virage, ou un sommet de côte."}
+]},
+{num:"26",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de croisement.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelles sont les conséquences d'un mauvais réglage de ces feux ?",a:"Une mauvaise vision vers l'avant et un risque d'éblouissement des autres usagers."},
+ {tag:"1ers S",q:"26 — Dans quelle situation peut-on déplacer une victime ?",a:"En présence d'un danger réel, immédiat, non contrôlable. Le déplacement de la victime doit rester exceptionnel."}
+]},
+{num:"27",qs:[
+ {tag:"VI",q:"Montrez le voyant d'alerte signalant une température trop élevée du liquide de refroidissement.",a:"(Voyant rouge représentant un thermomètre dans une vague, sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quelle est la conséquence d'une température trop élevée de ce liquide ?",a:"Une surchauffe ou une casse moteur."},
+ {tag:"1ers S",q:"27 — Lors d'un appel avec les services de secours, pourquoi devez-vous attendre que votre correspondant vous autorise à raccrocher ?",a:"Car il peut nous conseiller ou nous guider dans la réalisation des gestes à faire, ou ne pas faire, jusqu'à l'arrivée des secours."}
+]},
+{num:"28",qs:[
+ {tag:"VE",q:"Vérifiez l'état et la propreté des dispositifs réfléchissants.",a:"Vérification des dispositifs, propres et en bon état (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est l'utilité des dispositifs réfléchissants ?",a:"Rendre visible le véhicule la nuit."},
+ {tag:"1ers S",q:"28 — A quel moment pouvez-vous mettre fin à un appel avec les secours ?",a:"Uniquement lorsque notre correspondant nous invite à le faire."}
+]},
+{num:"29",qs:[
+ {tag:"VI",q:"Montrez le voyant signalant la mauvaise fermeture d'une portière.",a:"(Voyant représentant une voiture vue de dessus avec une portière ouverte.)"},
+ {tag:"QSER",q:"Quelle précaution dois-je prendre pour que les enfants installés à l'arrière ne puissent pas ouvrir leur portière ?",a:"Actionner la sécurité enfant sur les deux portières arrière."},
+ {tag:"1ers S",q:"29 — Citez les trois manières d'évaluer l'état de conscience d'une victime.",a:"- Lui poser des questions simples (« comment ça va ? », « vous m'entendez ? »).\n- Lui secouer doucement les épaules.\n- Lui prendre la main en lui demandant d'exécuter un geste simple (« serrez-moi la main »)."}
+]},
+{num:"30",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de position à l'avant et à l'arrière du véhicule.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Par temps clair, à quelle distance doivent-ils être visibles ?",a:"A 150 mètres."},
+ {tag:"1ers S",q:"30 — Quels sont les risques pour une personne en perte de connaissance qui est allongée sur le dos ?",a:"L'arrêt respiratoire et l'arrêt cardiaque."}
+]},
+{num:"31",qs:[
+ {tag:"VI",q:"Actionnez les feux de détresse.",a:"(Le candidat appuie sur le bouton triangle rouge.)"},
+ {tag:"QSER",q:"Quand les utilise-t-on ?",a:"En cas de panne, d'accident ou de ralentissement important."},
+ {tag:"1ers S",q:"31 — Quels comportements adopter en cas de diffusion du signal d'alerte du Système d'Alerte et d'Information des Populations (SAIP) ?",a:"- Se mettre en sécurité.\n- S'informer grâce aux médias et sites internet des autorités dès que leur consultation est possible.\n- Respecter les consignes des autorités."}
+]},
+{num:"32",qs:[
+ {tag:"VE",q:"Sur le flanc d'un pneumatique, désignez le repère du témoin d'usure de la bande de roulement.",a:"(Le triangle TWI gravé sur le flanc indique l'emplacement du témoin d'usure.)"},
+ {tag:"QSER",q:"Qu'est-ce que l'aquaplanage, et quelle peut être sa conséquence ?",a:"La présence d'un film d'eau entre le pneumatique et la chaussée pouvant entraîner une perte de contrôle du véhicule."},
+ {tag:"1ers S",q:"32 — Si un dégagement d'urgence de la victime est nécessaire, où doit-elle être déplacée ?",a:"Dans un endroit suffisamment éloigné du danger et de ses conséquences."}
+]},
+{num:"33",qs:[
+ {tag:"VI",q:"Montrez la commande permettant d'actionner le régulateur de vitesse.",a:"(Commande dédiée sur le volant ou sur la planche de bord.)"},
+ {tag:"QSER",q:"Sans actionner la commande du régulateur, comment le désactiver rapidement ?",a:"En appuyant sur la pédale de frein ou d'embrayage."},
+ {tag:"1ers S",q:"33 — Sur autoroute, comment indiquer avec précision les lieux de l'accident depuis un téléphone portable ?",a:"En indiquant le numéro de l'autoroute, le sens de circulation et le point kilométrique."}
+]},
+// Blocs 34–00 : suites du PDF (pages 14–39)
+{num:"34",qs:[
+ {tag:"VE",q:"Ouvrez la trappe à carburant et/ou vérifiez la bonne fermeture du bouchon.",a:"(Le candidat ouvre la trappe et vérifie le bouchon.)"},
+ {tag:"QSER",q:"Quelles sont les précautions à prendre lors du remplissage du réservoir ?",a:"Arrêter le moteur, ne pas fumer, ne pas téléphoner."},
+ {tag:"1ers S",q:"34 — Pourquoi l'alerte auprès des services de secours doit-elle être rapide et précise ?",a:"Pour permettre aux services de secours d'apporter les moyens adaptés aux victimes dans le délai le plus court."}
+]},
+{num:"35",qs:[
+ {tag:"VI",q:"Sans l'actionner, montrez la commande de l'avertisseur sonore.",a:"(Le candidat montre l'emplacement de la commande.)"},
+ {tag:"QSER",q:"Dans quel cas peut-on utiliser l'avertisseur sonore en agglomération ?",a:"En cas de danger immédiat."},
+ {tag:"1ers S",q:"35 — Pourquoi ne faut-il pas laisser une personne en perte de connaissance allongée sur le dos ?",a:"Car elle risque un étouffement par :\n- Des liquides présents dans la gorge.\n- La chute de la langue en arrière."}
+]},
+{num:"36",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le remplissage de l'huile moteur.",a:"Le candidat montre le bouchon de remplissage."},
+ {tag:"QSER",q:"Quel est le risque d'un manque d'huile moteur ?",a:"Un risque de détérioration ou de casse du moteur."},
+ {tag:"1ers S",q:"36 — L'utilisation d'un Défibrillateur Automatisé (DAE) sur une victime qui n'est pas en arrêt cardiaque présente-t-elle un risque ?",a:"Non, car le défibrillateur se déclenche uniquement quand la victime est en arrêt cardiaque."}
+]},
+{num:"37",qs:[
+ {tag:"VI",q:"Montrez la commande permettant de désactiver l'airbag du passager avant.",a:"(Commande avec position OFF/ON, visible sur le tableau de bord ou la console.)"},
+ {tag:"QSER",q:"Dans quelle situation doit-on le désactiver ?",a:"Lors du transport d'un enfant à l'avant dans un siège auto, dos à la route."},
+ {tag:"1ers S",q:"37 — Quelles sont les conditions pour réaliser le dégagement d'urgence d'une victime en présence d'un danger réel, immédiat et non contrôlable ?",a:"La victime doit être visible, facile à atteindre et rien ne doit gêner son dégagement. Il faut être sûr(e) de pouvoir réaliser le dégagement de la victime."}
+]},
+{num:"38",qs:[
+ {tag:"VE",q:"A l'aide de la plaque indicative, donnez la pression préconisée pour les pneumatiques arrières, véhicule chargé.",a:"(Le candidat lit la valeur sur la plaque indicative du véhicule.)"},
+ {tag:"QSER",q:"A quelle fréquence est-il préconisé de vérifier la pression des pneus ?",a:"Chaque mois, pour une utilisation normale de son véhicule, et avant chaque long trajet."},
+ {tag:"1ers S",q:"38 — Comment et pourquoi protéger une zone de danger en cas d'accident de la route ?",a:"En délimitant clairement et largement la zone de danger de façon visible pour protéger les victimes et éviter un sur-accident."}
+]},
+{num:"39",qs:[
+ {tag:"VI",q:"Montrez le voyant signalant l'absence de bouclage de la ceinture de sécurité du conducteur.",a:"(Voyant rouge représentant un bonhomme avec ceinture, sur le tableau de bord.)"},
+ {tag:"QSER",q:"En règle générale, à partir de quel âge un enfant peut-il être installé sur le siège passager avant du véhicule ?",a:"10 ans."},
+ {tag:"1ers S",q:"39 — Comment est composé le signal d'alerte du SAIP diffusé par les sirènes ?",a:"Il se compose de deux codes distincts :\n- Le Signal National d'Alerte (SNA), variation du signal sur trois cycles successifs.\n- Le signal de fin d'alerte, signal continu."}
+]},
+{num:"40",qs:[
+ {tag:"VE",q:"Vérifiez le fonctionnement de l'éclairage de la plaque d'immatriculation à l'arrière.",a:"Toute anomalie doit être signalée."},
+ {tag:"QSER",q:"Un défaut d'éclairage de la plaque lors du contrôle technique entraîne-t-il une contre-visite ?",a:"Oui."},
+ {tag:"1ers S",q:"40 — Quelles sont les trois informations à transmettre aux services de secours ?",a:"Le numéro de téléphone à partir duquel l'appel est émis, la nature et la localisation la plus précise du problème."}
+]},
+{num:"41",qs:[
+ {tag:"VI",q:"Vérifiez la présence de l'attestation d'assurance du véhicule et de sa vignette sur le pare-brise.",a:"(Le candidat vérifie la présence du document et de la vignette.)"},
+ {tag:"QSER",q:"Quels sont les deux autres documents obligatoires à présenter en cas de contrôle par les forces de l'ordre ?",a:"Le certificat d'immatriculation et le permis de conduire. Le terme « carte grise » est accepté."},
+ {tag:"1ers S",q:"41 — Qu'est-ce qu'une hémorragie ?",a:"C'est une perte de sang prolongée qui ne s'arrête pas. Elle imbibe de sang un mouchoir en quelques secondes."}
+]},
+{num:"42",qs:[
+ {tag:"VE",q:"Indiquez où se situe la sécurité enfant sur l'une des portières à l'arrière du véhicule.",a:"(Le candidat montre l'emplacement de la sécurité enfant sur la portière.)"},
+ {tag:"QSER",q:"Si la sécurité enfant est enclenchée, est-il possible d'ouvrir la portière arrière depuis l'extérieur ?",a:"Oui."},
+ {tag:"1ers S",q:"42 — Quels sont les risques pour une personne victime d'une hémorragie ?",a:"Entraîner pour la victime une détresse circulatoire ou un arrêt cardiaque."}
+]},
+{num:"43",qs:[
+ {tag:"VI",q:"Allumez le(s) feu(x) de brouillard arrière(s) et montrez le voyant correspondant.",a:"(Voyant orange représentant un feu avec des traits obliques, sur le tableau de bord.)"},
+ {tag:"QSER",q:"Pouvez-vous les utiliser par forte pluie ?",a:"Non."},
+ {tag:"1ers S",q:"43 — Quels sont les signes d'un arrêt cardiaque ?",a:"La victime ne répond pas, ne réagit pas et ne respire pas ou présente une respiration anormale."}
+]},
+{num:"44",qs:[
+ {tag:"VE",q:"Avec l'assistance de l'accompagnateur, contrôlez l'état, la propreté et le fonctionnement du ou des feux de recul.",a:"Vérification des feux, propres, en bon état et qui fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelles sont leurs deux utilités ?",a:"- Éclairer la zone de recul la nuit.\n- Avertir les autres usagers de la manœuvre."},
+ {tag:"1ers S",q:"44 — Qu'est-ce qu'un défibrillateur automatisé externe (DAE) ?",a:"C'est un appareil qui peut permettre de rétablir une activité cardiaque normale à une victime en arrêt cardiaque."}
+]},
+{num:"45",qs:[
+ {tag:"VI",q:"Montrez comment régler la hauteur de l'appui-tête du siège conducteur.",a:"(Le candidat montre la commande de réglage de l'appui-tête.)"},
+ {tag:"QSER",q:"Quelle est son utilité ?",a:"Permet de retenir le mouvement de la tête en cas de choc et de limiter les blessures."},
+ {tag:"1ers S",q:"45 — Par quels moyens doit être réalisée l'alerte des secours ?",a:"L'alerte doit être donnée à l'aide d'un téléphone portable ou, à défaut, d'un téléphone fixe, ou d'une borne d'appel d'urgence."}
+]},
+{num:"46",qs:[
+ {tag:"VE",q:"Avec l'assistance de l'accompagnateur, contrôlez l'état, la propreté et le fonctionnement des feux de stop.",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est la conséquence en cas de panne des feux de stop ?",a:"Un manque d'information pour les usagers suiveurs et un risque de collision."},
+ {tag:"1ers S",q:"46 — Lors d'un appel avec les services de secours, pourquoi devez-vous attendre que votre correspondant vous autorise à raccrocher ?",a:"Car il peut nous conseiller ou nous guider dans la réalisation des gestes à faire, ou ne pas faire, jusqu'à l'arrivée des secours."}
+]},
+{num:"47",qs:[
+ {tag:"VI",q:"De quelle couleur est le voyant qui indique au conducteur que le feu de brouillard arrière est allumé ?",a:"Orange."},
+ {tag:"QSER",q:"Quelle est la différence entre un voyant orange et un voyant rouge ?",a:"- Rouge : une anomalie de fonctionnement ou un danger.\n- Orange : un élément important."},
+ {tag:"1ers S",q:"47 — Qu'est-ce qu'un arrêt cardiaque ?",a:"Le cœur ne fonctionne plus ou fonctionne d'une façon anarchique."}
+]},
+{num:"48",qs:[
+ {tag:"VE",q:"Ouvrez et refermez le capot, puis vérifiez sa bonne fermeture.",a:"(Le candidat ouvre, referme et vérifie le verrouillage du capot.)"},
+ {tag:"QSER",q:"En roulant, quel est le risque d'une mauvaise fermeture du capot ?",a:"Un risque d'ouverture du capot pouvant entraîner un accident."},
+ {tag:"1ers S",q:"48 — Quel est le risque principal d'un arrêt cardiaque sans intervention des secours ?",a:"La mort de la victime qui survient en quelques minutes."}
+]},
+{num:"49",qs:[
+ {tag:"VI",q:"Montrez la commande de recyclage de l'air.",a:"(Le candidat montre la commande de recyclage d'air dans l'habitacle.)"},
+ {tag:"QSER",q:"Quel peut être le risque de maintenir le recyclage de l'air de manière prolongée ?",a:"Un risque de mauvaise visibilité par l'apparition de buée sur les surfaces vitrées."},
+ {tag:"1ers S",q:"49 — Quels sont les risques pour une personne en perte de connaissance qui est allongée sur le dos ?",a:"L'arrêt respiratoire et l'arrêt cardiaque."}
+]},
+{num:"50",qs:[
+ {tag:"VE",q:"Montrez l'orifice de remplissage du produit lave-glace.",a:"(Le candidat ouvre le capot et montre l'orifice de remplissage du lave-glace.)"},
+ {tag:"QSER",q:"Quel est le principal risque d'une absence de liquide lave-glace ?",a:"Une mauvaise visibilité."},
+ {tag:"1ers S",q:"50 — Pourquoi faut-il pratiquer immédiatement une réanimation cardio-pulmonaire sur une victime en arrêt cardiaque ?",a:"Car les lésions du cerveau surviennent dès les premières minutes."}
+]},
+{num:"51",qs:[
+ {tag:"VI",q:"Allumez les feux de route et montrez le voyant correspondant.",a:"(Voyant bleu en forme de phare sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quel est le risque de maintenir les feux de route lors d'un croisement avec d'autres usagers ?",a:"Un risque d'éblouissement des autres usagers."},
+ {tag:"1ers S",q:"51 — Quel est l'objectif du Signal d'Alerte et d'Information des Populations (SAIP) ?",a:"Avertir la population d'un danger imminent ou qu'un événement grave est en train de se produire."}
+]},
+{num:"52",qs:[
+ {tag:"VE",q:"Vérifiez l'état, la propreté et le fonctionnement des feux diurnes.",a:"Vérification des feux, propres, en bon état et qui fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est leur utilité ?",a:"Rendre le véhicule plus visible le jour."},
+ {tag:"1ers S",q:"52 — A quel moment pouvez-vous mettre fin à un appel avec les secours ?",a:"Uniquement lorsque notre correspondant nous invite à le faire."}
+]},
+{num:"53",qs:[
+ {tag:"VI",q:"Vérifiez la présence du constat amiable dans le véhicule.",a:"(Le candidat montre la présence du constat amiable.)"},
+ {tag:"QSER",q:"En cas d'accident, dans quel délai doit-il être transmis à l'assureur ?",a:"5 jours."},
+ {tag:"1ers S",q:"53 — Quel est le risque principal d'un arrêt cardiaque sans intervention des secours ?",a:"La mort de la victime qui survient en quelques minutes."}
+]},
+{num:"54",qs:[
+ {tag:"VE",q:"Vérifiez la présence du triangle de pré-signalisation.",a:"(Le candidat montre la présence du triangle dans le véhicule.)"},
+ {tag:"QSER",q:"Utilise-t-on le triangle de pré-signalisation sur autoroute ?",a:"Non."},
+ {tag:"1ers S",q:"54 — Quel comportement doit-on adopter en présence d'une victime en arrêt cardiaque ?",a:"- ALERTER : alerter immédiatement les secours.\n- MASSER : pratiquer une réanimation cardio-pulmonaire.\n- DEFIBRILLER : utiliser un défibrillateur automatique (DAE) si possible."}
+]},
+{num:"55",qs:[
+ {tag:"VI",q:"De quelle couleur est le voyant qui indique une défaillance du système de freinage.",a:"Rouge."},
+ {tag:"QSER",q:"Quel est le risque de circuler avec un frein de parking mal desserré ?",a:"Une dégradation du système de freinage."},
+ {tag:"1ers S",q:"55 — Comment arrêter une hémorragie ?",a:"En appuyant fortement sur l'endroit qui saigne avec les doigts ou avec la paume de la main en mettant un tissu propre sur la plaie."}
+]},
+{num:"56",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le changement d'une ampoule à l'avant du véhicule.",a:"(Le candidat ouvre le capot et montre l'emplacement de l'ampoule avant.)"},
+ {tag:"QSER",q:"Quelles sont les conséquences en cas de panne d'un feu de croisement ?",a:"Une mauvaise visibilité et le risque d'être confondu avec un deux roues."},
+ {tag:"1ers S",q:"56 — Citez les trois manières d'évaluer l'état de conscience d'une victime ?",a:"- Lui poser des questions simples (« comment ça va ? », « vous m'entendez ? »).\n- Lui secouer doucement les épaules.\n- Lui prendre la main en lui demandant d'exécuter un geste simple (« serrez-moi la main »)."}
+]},
+{num:"57",qs:[
+ {tag:"VI",q:"Si le véhicule en est équipé, montrez la commande du limiteur de vitesse.",a:"(Commande dédiée au volant ou sur la planche de bord.)"},
+ {tag:"QSER",q:"Quelle est l'utilité d'un limiteur de vitesse ?",a:"Ne pas dépasser la vitesse programmée par le conducteur."},
+ {tag:"1ers S",q:"57 — Quels sont les numéros d'urgence à appeler ?",a:"- Le 18, numéro d'appel des sapeurs-pompiers.\n- Le 15, numéro d'appel des SAMU.\n- Le 112, numéro de téléphone réservé aux appels d'urgence et valide dans l'ensemble de l'Union Européenne."}
+]},
+{num:"58",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le changement d'une ampoule à l'arrière du véhicule.",a:"(Le candidat montre l'emplacement des ampoules arrière du véhicule.)"},
+ {tag:"QSER",q:"Quelles sont les conséquences en cas de panne d'un feu de position arrière ?",a:"Être mal vu et un risque de collision."},
+ {tag:"1ers S",q:"58 — Comment est diffusée l'alerte émise par le Signal d'Alerte et d'Information aux Populations (SAIP) ?",a:"Grâce aux sirènes, aux médias tels que Radio France et France Télévision ou encore grâce à l'application SAIP."}
+]},
+{num:"59",qs:[
+ {tag:"VI",q:"Faites fonctionner l'essuie-glace arrière du véhicule.",a:"(Le candidat actionne la commande de l'essuie-glace arrière.)"},
+ {tag:"QSER",q:"Pour une bonne visibilité vers l'arrière, en plus de l'utilisation de l'essuie-glace, quelle commande pouvez-vous actionner par temps de pluie ?",a:"La commande de désembuage arrière. Le terme dégivrage peut remplacer celui de désembuage."},
+ {tag:"1ers S",q:"59 — Quels comportements adopter en présence d'une victime qui ne répond pas et ne réagit pas, mais respire ?",a:"- La placer en position stable sur le côté ou position latérale de sécurité.\n- Alerter les secours.\n- Surveiller la respiration de la victime jusqu'à l'arrivée des secours."}
+]},
+{num:"60",qs:[
+ {tag:"VE",q:"Ouvrez et refermez le coffre, puis vérifiez sa bonne fermeture.",a:"(Le candidat ouvre, referme et vérifie le verrouillage du coffre.)"},
+ {tag:"QSER",q:"Lorsque vous transportez un poids important dans le coffre, quelles sont les précautions à prendre en ce qui concerne les pneumatiques et l'éclairage avant ?",a:"Augmenter la pression des pneumatiques et régler la hauteur des feux avants."},
+ {tag:"1ers S",q:"60 — L'utilisation d'un Défibrillateur Automatisé (DAE) sur une victime qui n'est pas en arrêt cardiaque présente-t-elle un risque ?",a:"Non car le défibrillateur se déclenche uniquement quand la victime est en arrêt cardiaque."}
+]},
+{num:"61",qs:[
+ {tag:"VI",q:"Indiquez où se situe les attaches de type Isofix dans le véhicule.",a:"Pour info : les attaches de type Isofix sont obligatoires sur les véhicules neufs depuis 2011."},
+ {tag:"QSER",q:"Peut-on fixer tous les sièges enfant sur des attaches de type Isofix ?",a:"Non (uniquement ceux compatibles avec ce type d'attache)."},
+ {tag:"1ers S",q:"61 — Comment vérifier la respiration d'une victime ?",a:"Regarder si le ventre et la poitrine se soulèvent et sentir de l'air à l'expiration."}
+]},
+{num:"62",qs:[
+ {tag:"VE",q:"Ouvrez et refermez le coffre, puis vérifiez sa bonne fermeture. (2e vérification)",a:"(Le candidat ouvre, referme et vérifie le verrouillage du coffre.)"},
+ {tag:"QSER",q:"Quels sont les risques de circuler avec des objets sur la plage arrière ?",a:"Une mauvaise visibilité vers l'arrière et un risque de projection en cas de freinage brusque ou de choc."},
+ {tag:"1ers S",q:"62 — Qu'est-ce qu'une hémorragie ?",a:"C'est une perte de sang prolongée qui ne s'arrête pas. Elle imbibe de sang un mouchoir en quelques secondes."}
+]},
+{num:"63",qs:[
+ {tag:"VI",q:"Montrez sur le tableau de bord le voyant indiquant une baisse de pression d'air d'un pneumatique.",a:"Pour info : obligatoire sur tous les véhicules neufs mis en circulation à compter du 01/11/2014."},
+ {tag:"QSER",q:"A quelle fréquence est-il préconisé de vérifier la pression d'air des pneumatiques ?",a:"Tous les mois."},
+ {tag:"1ers S",q:"63 — Qu'est-ce qu'un arrêt cardiaque ?",a:"Le cœur ne fonctionne plus ou fonctionne d'une façon anarchique."}
+]},
+{num:"64",qs:[
+ {tag:"VE",q:"Procédez à l'ouverture du capot puis à sa fermeture en vous assurant de son verrouillage.",a:"(Le candidat ouvre, referme et vérifie le verrouillage du capot.)"},
+ {tag:"QSER",q:"Pour un capot s'ouvrant depuis l'avant du véhicule, quelle est l'utilité du dispositif de sécurité ?",a:"Empêcher l'ouverture du capot en circulation en cas de mauvais verrouillage."},
+ {tag:"1ers S",q:"64 — Quels sont les risques pour une personne victime d'une hémorragie ?",a:"Entraîner pour la victime une détresse circulatoire ou un arrêt cardiaque."}
+]},
+{num:"65",qs:[
+ {tag:"VI",q:"Montrez la commande de réglage de hauteur des feux. (2e occurrence)",a:"Dispositif situé en général à gauche du volant."},
+ {tag:"QSER",q:"Pourquoi doit-on régler la hauteur des feux ?",a:"Pour ne pas éblouir les autres usagers."},
+ {tag:"1ers S",q:"65 — Comment et pourquoi protéger une zone de danger en cas d'accident de la route ?",a:"En délimitant clairement et largement la zone de danger de façon visible pour protéger les victimes et éviter un sur-accident."}
+]},
+{num:"66",qs:[
+ {tag:"VE",q:"Montrez où se situent les gicleurs de lave-glace avant.",a:"(Le candidat montre l'emplacement des gicleurs sur le capot ou le pare-brise.)"},
+ {tag:"QSER",q:"Quelle est la principale conséquence d'un dispositif de lave-glace défaillant ?",a:"Une mauvaise visibilité due à l'impossibilité de nettoyer le pare-brise."},
+ {tag:"1ers S",q:"66 — Qu'est-ce qu'un défibrillateur automatisé externe (DAE) ?",a:"C'est un appareil qui peut permettre de rétablir une activité cardiaque normale à une victime en arrêt cardiaque."}
+]},
+{num:"67",qs:[
+ {tag:"VI",q:"Mettez le rétroviseur intérieur en position « nuit ». (2e occurrence)",a:"Si le rétroviseur de l'accompagnateur gène la manipulation du dispositif, l'explication suffit. Si le véhicule possède un système automatique de mise en position « nuit » du rétroviseur intérieur, le candidat l'indique."},
+ {tag:"QSER",q:"Quel est l'intérêt de la position nuit ?",a:"Ne pas être ébloui par les feux du véhicule suiveur."},
+ {tag:"1ers S",q:"67 — Comment est composé le signal d'alerte du Système d'Alerte et d'Information des Populations (SAIP) diffusé par les sirènes ?",a:"Il se compose de deux codes distincts :\n- le Signal National d'Alerte (SNA), variation du signal sur trois cycles successifs.\n- Le signal de fin d'alerte, signal continu."}
+]},
+// À partir d'ici le PDF repart sur des blocs 68–00 qui sont des occurrences supplémentaires
+// On les inclut car la question 1ers secours est différente
+{num:"68",qs:[
+ {tag:"VE",q:"Contrôlez l'état du flanc sur l'un des pneumatiques. (2e occurrence)",a:"En bon état (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Citez un endroit où l'on peut trouver les pressions préconisées pour les pneumatiques ?",a:"Elles sont indiquées :\n- soit sur une plaque sur une portière.\n- soit dans la notice d'utilisation du véhicule.\n- soit au niveau de la trappe à carburant."},
+ {tag:"1ers S",q:"68 — Sur autoroute, comment indiquer avec précision les lieux de l'accident depuis un téléphone portable ?",a:"En indiquant le numéro de l'autoroute, le sens de circulation et le point kilométrique."}
+]},
+{num:"69",qs:[
+ {tag:"VI",q:"Faites fonctionner les essuie-glaces avants du véhicule sur la position la plus rapide. (2e occurrence)",a:"(Le candidat actionne la commande des essuie-glaces sur la vitesse maximale.)"},
+ {tag:"QSER",q:"Comment détecte-t-on leur usure en circulation ?",a:"En cas de pluie, lorsqu'ils laissent des traces sur le pare-brise."},
+ {tag:"1ers S",q:"69 — Comment vérifier la respiration d'une victime ?",a:"Regarder si le ventre et la poitrine se soulèvent et sentir de l'air à l'expiration."}
+]},
+{num:"70",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le contrôle du niveau du liquide de frein. (2e occurrence)",a:"Le candidat montre que le niveau est entre le mini et le maxi."},
+ {tag:"QSER",q:"Quelle est la conséquence d'un niveau insuffisant du liquide de frein ?",a:"Une perte d'efficacité du freinage."},
+ {tag:"1ers S",q:"70 — En cas de panne ou d'accident, quel équipement de sécurité doit être porté avant de quitter le véhicule ?",a:"Il faut porter le gilet de haute visibilité avant de sortir du véhicule."}
+]},
+{num:"71",qs:[
+ {tag:"VI",q:"Vérifiez la présence du gilet de haute visibilité. (2e occurrence)",a:"Le candidat doit montrer où il se trouve sans obligation de le sortir."},
+ {tag:"QSER",q:"En cas de panne ou d'accident, quel autre accessoire de sécurité est obligatoire ?",a:"Le triangle de pré-signalisation."},
+ {tag:"1ers S",q:"71 — Si un dégagement d'urgence de la victime est nécessaire, où doit-elle être déplacée ?",a:"Dans un endroit suffisamment éloigné du danger et de ses conséquences."}
+]},
+{num:"72",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le remplissage du liquide de refroidissement. (2e occurrence)",a:"Le candidat ouvre le capot et montre le bocal."},
+ {tag:"QSER",q:"Quel est le danger si l'on complète le niveau du liquide lorsque le moteur est chaud ?",a:"Un risque de brûlure."},
+ {tag:"1ers S",q:"72 — Comment arrêter une hémorragie ?",a:"En appuyant fortement sur l'endroit qui saigne avec les doigts ou avec la paume de la main en mettant un tissu propre sur la plaie."}
+]},
+{num:"73",qs:[
+ {tag:"VI",q:"Actionnez le dégivrage de la lunette arrière et montrez le voyant ou le repère correspondant. (2e occurrence)",a:"(Le candidat actionne la commande et montre le voyant allumé.)"},
+ {tag:"QSER",q:"Quelle peut être la conséquence d'une panne de dégivrage de la lunette arrière ?",a:"L'insuffisance ou l'absence de visibilité vers l'arrière."},
+ {tag:"1ers S",q:"73 — Hors autoroute ou endroit dangereux, en cas de panne ou d'accident, où doit être placé le triangle de pré-signalisation ?",a:"Le triangle de pré-signalisation doit être placé à une distance d'environ 30 m de la panne ou de l'accident, ou avant un virage, ou un sommet de côte."}
+]},
+{num:"74",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement de tous les clignotants côté trottoir. (2e occurrence)",a:"Vérification des clignotants, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est la signification d'un clignotement plus rapide ?",a:"Non fonctionnement de l'une des ampoules."},
+ {tag:"1ers S",q:"74 — Quelles sont les précautions à prendre pour réaliser le dégagement d'urgence d'une victime en présence d'un danger réel, immédiat et non contrôlable ?",a:"La victime doit être visible, facile à atteindre et rien ne doit gêner son dégagement. Il faut être sûr(e) de pouvoir réaliser le dégagement de la victime."}
+]},
+{num:"75",qs:[
+ {tag:"VI",q:"Montrez le voyant d'alerte signalant une pression insuffisante d'huile dans le moteur. (2e occurrence)",a:"(Voyant rouge en forme de bidon d'huile sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quelles sont les conditions à respecter pour compléter le niveau d'huile ?",a:"Moteur froid et sur un terrain plat."},
+ {tag:"1ers S",q:"75 — Quelles sont les trois informations à transmettre aux services de secours ?",a:"Le numéro de téléphone à partir duquel l'appel est émis, la nature et la localisation la plus précise du problème."}
+]},
+{num:"76",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de détresse à l'avant et à l'arrière. (2e occurrence)",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Dans quels cas doit-on les utiliser ?",a:"En cas de panne, d'accident ou de ralentissement important."},
+ {tag:"1ers S",q:"76 — Dans quel cas peut-on positionner une victime en Position Latérale de Sécurité (PLS) ?",a:"Si la victime ne répond pas, ne réagit pas et respire."}
+]},
+{num:"77",qs:[
+ {tag:"VI",q:"Vérifiez la présence de l'éthylotest. (2e occurrence)",a:"(Le candidat indique où il se trouve dans le véhicule.)"},
+ {tag:"QSER",q:"A partir de quel taux d'alcoolémie, en période de permis probatoire, est-on en infraction ?",a:"0,2 g/l, c'est-à-dire 0 verre, car dès le 1er verre ce seuil peut être dépassé."},
+ {tag:"1ers S",q:"77 — Quel comportement doit-on adopter en présence d'une victime en arrêt cardiaque ?",a:"- ALERTER : alerter immédiatement les secours.\n- MASSER : pratiquer une réanimation cardio-pulmonaire.\n- DEFIBRILLER : utiliser un défibrillateur automatique (DAE) si possible."}
+]},
+{num:"78",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de route. (2e occurrence)",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Citez un cas d'utilisation d'un appel lumineux.",a:"- Pour avertir de son approche.\n- En cas de danger.\n- A la place de l'avertisseur sonore."},
+ {tag:"1ers S",q:"78 — En cas de panne ou d'accident, quel équipement de sécurité doit être porté avant de quitter le véhicule ?",a:"Il faut porter le gilet de haute visibilité avant de sortir du véhicule."}
+]},
+{num:"79",qs:[
+ {tag:"VI",q:"Positionnez la commande pour diriger l'air vers le pare-brise. (2e occurrence)",a:"La position auto (désembuage automatique) peut être utilisée si le véhicule en est équipé."},
+ {tag:"QSER",q:"Citez deux éléments complémentaires permettant un désembuage efficace ?",a:"La commande de vitesse de ventilation.\n- La commande d'air chaud.\n- La climatisation."},
+ {tag:"1ers S",q:"79 — Quel est l'objectif du Signal d'Alerte et d'Information des Populations (SAIP) ?",a:"Avertir la population d'un danger imminent ou qu'un événement grave est en train de se produire."}
+]},
+{num:"80",qs:[
+ {tag:"VE",q:"Montrez où doit s'effectuer le contrôle du niveau d'huile moteur. (2e occurrence)",a:"Le candidat montre la jauge. Pas de manipulation exigée."},
+ {tag:"QSER",q:"Quel est le principal risque d'un manque d'huile moteur ?",a:"Un risque de détérioration ou de casse du moteur."},
+ {tag:"1ers S",q:"80 — Comment est diffusée l'alerte émise par le Signal d'Alerte et d'Information aux Populations (SAIP) ?",a:"Grâce aux sirènes, aux médias tels que Radio France et France Télévision ou encore grâce à l'application SAIP."}
+]},
+{num:"81",qs:[
+ {tag:"VI",q:"De quelle couleur est le voyant qui indique une défaillance du système de freinage ? (2e occurrence)",a:"Rouge."},
+ {tag:"QSER",q:"Quel est le risque de circuler avec un frein de parking mal desserré ?",a:"Une dégradation du système de freinage."},
+ {tag:"1ers S",q:"81 — En général, en cas de panne ou d'accident, où doit être placé le triangle de pré-signalisation ?",a:"Le triangle de pré-signalisation doit être placé à une distance d'environ 30 m de la panne ou de l'accident, ou avant un virage ou un sommet de côte."}
+]},
+{num:"82",qs:[
+ {tag:"VE",q:"Contrôlez l'état, la propreté et le fonctionnement des feux de croisement. (2e occurrence)",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelles sont les conséquences d'un mauvais réglage de ces feux ?",a:"Une mauvaise vision vers l'avant et un risque d'éblouissement des autres usagers."},
+ {tag:"1ers S",q:"82 — Dans quelle situation peut-on déplacer une victime ?",a:"En présence d'un danger réel, immédiat, non contrôlable. Ce déplacement doit rester exceptionnel."}
+]},
+{num:"83",qs:[
+ {tag:"VI",q:"Montrez le voyant d'alerte signalant une température trop élevée du liquide de refroidissement. (2e occurrence)",a:"(Voyant rouge représentant un thermomètre dans une vague, sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quelle est la conséquence d'une température trop élevée de ce liquide ?",a:"La surchauffe ou la casse moteur."},
+ {tag:"1ers S",q:"83 — Lors d'un appel avec les services de secours, pourquoi devez-vous attendre que votre correspondant vous autorise à raccrocher ?",a:"Car il peut nous conseiller ou nous guider dans la réalisation des gestes à faire, ou ne pas faire, jusqu'à l'arrivée des secours."}
+]},
+{num:"84",qs:[
+ {tag:"VE",q:"Sur le flanc d'un pneumatique, désignez le repère du témoin d'usure de la bande de roulement. (2e occurrence)",a:"(Le triangle TWI gravé sur le flanc indique l'emplacement du témoin d'usure.)"},
+ {tag:"QSER",q:"Qu'est-ce que l'aquaplanage, et quelle peut être sa conséquence ?",a:"La présence d'un film d'eau entre le pneumatique et la chaussée pouvant entraîner une perte de contrôle du véhicule."},
+ {tag:"1ers S",q:"84 — Si un dégagement d'urgence de la victime est nécessaire, où doit-elle être déplacée ?",a:"Dans un endroit suffisamment éloigné du danger et de ses conséquences."}
+]},
+{num:"85",qs:[
+ {tag:"VI",q:"Actionnez les feux de détresse. (2e occurrence)",a:"(Le candidat appuie sur le bouton triangle rouge.)"},
+ {tag:"QSER",q:"Dans quels cas doit-on les utiliser ?",a:"En cas de panne, d'accident ou de ralentissement important."},
+ {tag:"1ers S",q:"85 — Quels comportements adopter en cas de diffusion du signal d'alerte du Système d'Alerte et d'Information des Populations (SAIP) ?",a:"- Se mettre en sécurité.\n- S'informer grâce aux médias et sites internet des autorités dès que leur consultation est possible.\n- Respecter les consignes des autorités."}
+]},
+{num:"86",qs:[
+ {tag:"VE",q:"A l'aide de la plaque indicative, donnez la pression préconisée pour les pneumatiques arrières, véhicule chargé. (2e occurrence)",a:"(Le candidat lit la valeur sur la plaque indicative du véhicule.)"},
+ {tag:"QSER",q:"A quelle fréquence est-il préconisé de vérifier la pression des pneus ?",a:"Chaque mois pour une utilisation normale de son véhicule et avant chaque long trajet."},
+ {tag:"1ers S",q:"86 — Comment et pourquoi protéger une zone de danger en cas d'accident de la route ?",a:"En délimitant clairement et largement la zone de danger de façon visible pour protéger les victimes et éviter un sur-accident."}
+]},
+{num:"87",qs:[
+ {tag:"VI",q:"Montrez la commande permettant de désactiver l'airbag du passager avant. (2e occurrence)",a:"(Commande avec position OFF/ON, visible sur le tableau de bord ou la console.)"},
+ {tag:"QSER",q:"Dans quelle situation doit-on le désactiver ?",a:"Lors du transport d'un enfant dans un siège auto dos à la route."},
+ {tag:"1ers S",q:"87 — Quelles sont les conditions pour réaliser le dégagement d'urgence d'une victime en présence d'un danger réel, immédiat et non contrôlable ?",a:"La victime doit être visible, facile à atteindre et rien ne doit gêner son dégagement. Il faut être sûr(e) de pouvoir réaliser le dégagement de la victime."}
+]},
+{num:"88",qs:[
+ {tag:"VE",q:"Indiquez où se situe la sécurité enfant sur l'une des portières à l'arrière du véhicule. (2e occurrence)",a:"(Le candidat montre l'emplacement de la sécurité enfant sur la portière.)"},
+ {tag:"QSER",q:"Si la sécurité enfant est enclenchée, est-il possible d'ouvrir la portière arrière depuis l'extérieur ?",a:"Oui."},
+ {tag:"1ers S",q:"88 — Quels sont les risques pour une personne victime d'une hémorragie ?",a:"Entraîner pour la victime une détresse circulatoire ou un arrêt cardiaque."}
+]},
+{num:"89",qs:[
+ {tag:"VI",q:"Montrez le voyant signalant l'absence de bouclage de la ceinture de sécurité du conducteur. (2e occurrence)",a:"(Voyant rouge représentant un bonhomme avec ceinture, sur le tableau de bord.)"},
+ {tag:"QSER",q:"En règle générale, à partir de quel âge un enfant peut-il être installé sur le siège passager avant du véhicule ?",a:"10 ans."},
+ {tag:"1ers S",q:"89 — Comment est composé le signal d'alerte du Système d'Alerte et d'Information des Populations (SAIP) diffusé par les sirènes ?",a:"Il se compose de deux codes distincts :\n- le Signal National d'Alerte (SNA), variation du signal sur trois cycles successifs.\n- Le signal de fin d'alerte, signal continu."}
+]},
+{num:"90",qs:[
+ {tag:"VE",q:"Avec l'assistance de l'accompagnateur, contrôlez l'état, la propreté et le fonctionnement des feux de stop. (2e occurrence)",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est la conséquence en cas de panne des feux de stop ?",a:"Un manque d'information pour les usagers suiveurs et un risque de collision."},
+ {tag:"1ers S",q:"90 — Lors d'un appel avec les services de secours, pourquoi devez-vous attendre que votre correspondant vous autorise à raccrocher ?",a:"Car il peut nous conseiller ou nous guider dans la réalisation des gestes à faire, ou ne pas faire, jusqu'à l'arrivée des secours."}
+]},
+{num:"91",qs:[
+ {tag:"VI",q:"Allumez le(s) feu(x) de brouillard arrière(s) et montrez le voyant correspondant. (2e occurrence)",a:"(Voyant orange représentant un feu avec des traits obliques, sur le tableau de bord.)"},
+ {tag:"QSER",q:"Pouvez-vous les utiliser par forte pluie ?",a:"Non."},
+ {tag:"1ers S",q:"91 — Quels sont les signes d'un arrêt cardiaque ?",a:"La victime ne répond pas, ne réagit pas et ne respire pas, ou présente une respiration anormale."}
+]},
+{num:"92",qs:[
+ {tag:"VE",q:"Vérifiez l'état, la propreté et le fonctionnement des feux diurnes. (2e occurrence)",a:"Vérification des feux, propres, en bon état et fonctionnent (toute anomalie doit être signalée)."},
+ {tag:"QSER",q:"Quelle est leur utilité ?",a:"Rendre le véhicule plus visible le jour."},
+ {tag:"1ers S",q:"92 — A quel moment pouvez-vous mettre fin à un appel avec les secours ?",a:"Uniquement lorsque notre correspondant nous invite à le faire."}
+]},
+{num:"93",qs:[
+ {tag:"VI",q:"Montrez la commande de recyclage de l'air. (2e occurrence)",a:"(Le candidat montre la commande de recyclage d'air dans l'habitacle.)"},
+ {tag:"QSER",q:"Quel peut être le risque de maintenir le recyclage de l'air de manière prolongée ?",a:"Un risque de mauvaise visibilité par l'apparition de buée sur les surfaces vitrées."},
+ {tag:"1ers S",q:"93 — Quels sont les risques pour une personne en perte de connaissance qui est allongée sur le dos ?",a:"L'arrêt respiratoire et l'arrêt cardiaque."}
+]},
+{num:"94",qs:[
+ {tag:"VE",q:"Vérifiez la présence du triangle de pré-signalisation. (2e occurrence)",a:"(Le candidat montre la présence du triangle dans le véhicule.)"},
+ {tag:"QSER",q:"Utilise-t-on le triangle de pré-signalisation sur autoroute ?",a:"Non."},
+ {tag:"1ers S",q:"94 — Quel comportement doit-on adopter en présence d'une victime en arrêt cardiaque ?",a:"- ALERTER : alerter immédiatement les secours.\n- MASSER : pratiquer une réanimation cardio-pulmonaire.\n- DEFIBRILLER : utiliser un défibrillateur automatique (DAE) si possible."}
+]},
+{num:"95",qs:[
+ {tag:"VI",q:"Allumez les feux de route et montrez le voyant correspondant. (2e occurrence)",a:"(Voyant bleu en forme de phare sur le tableau de bord.)"},
+ {tag:"QSER",q:"Quel est le risque de maintenir les feux de route lors d'un croisement avec d'autres usagers ?",a:"Un risque d'éblouissement des autres usagers."},
+ {tag:"1ers S",q:"95 — Quel est l'objectif du Signal d'Alerte et d'Information des Populations (SAIP) ?",a:"Avertir la population d'un danger imminent ou qu'un événement grave est en train de se produire."}
+]},
+{num:"96",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le changement d'une ampoule à l'avant du véhicule. (2e occurrence)",a:"(Le candidat ouvre le capot et montre l'emplacement de l'ampoule avant.)"},
+ {tag:"QSER",q:"Quelles sont les conséquences en cas de panne d'un feu de croisement ?",a:"Une mauvaise visibilité et le risque d'être confondu avec un deux roues."},
+ {tag:"1ers S",q:"96 — Citez les trois manières d'évaluer l'état de conscience d'une victime ?",a:"- Lui poser des questions simples (« comment ça va ? », « vous m'entendez ? »).\n- Lui secouer doucement les épaules.\n- Lui prendre la main en lui demandant d'exécuter un geste simple (« serrez-moi la main »)."}
+]},
+{num:"97",qs:[
+ {tag:"VI",q:"Faites fonctionner l'essuie-glace arrière du véhicule. (2e occurrence)",a:"(Le candidat actionne la commande de l'essuie-glace arrière.)"},
+ {tag:"QSER",q:"Pour une bonne visibilité vers l'arrière, en plus de l'utilisation de l'essuie-glace, quelle commande pouvez-vous actionner par temps de pluie ?",a:"La commande de désembuage arrière. Le terme dégivrage peut remplacer celui de désembuage."},
+ {tag:"1ers S",q:"97 — Quels comportements adopter en présence d'une victime qui ne répond pas et ne réagit pas, mais respire ?",a:"- La placer en position stable sur le côté ou position latérale de sécurité.\n- Alerter les secours.\n- Surveiller la respiration de la victime jusqu'à l'arrivée des secours."}
+]},
+{num:"98",qs:[
+ {tag:"VE",q:"Montrez où s'effectue le changement d'une ampoule à l'arrière du véhicule. (2e occurrence)",a:"(Le candidat montre l'emplacement des ampoules arrière du véhicule.)"},
+ {tag:"QSER",q:"Quelles sont les conséquences en cas de panne d'un feu de position arrière ?",a:"Être mal vu et un risque de collision."},
+ {tag:"1ers S",q:"98 — Comment est diffusée l'alerte émise par le Signal d'Alerte et d'Information aux Populations (SAIP) ?",a:"Grâce aux sirènes, aux médias tels que Radio France et France Télévision ou encore grâce à l'application SAIP."}
+]},
+{num:"99",qs:[
+ {tag:"VI",q:"Montrez le voyant indiquant une baisse de pression d'air d'un pneumatique ?",a:"Pour info : obligatoire sur tous les véhicules neufs mis en circulation à compter du 01/11/2014."},
+ {tag:"QSER",q:"A quelle fréquence est-il préconisé de vérifier la pression d'air des pneumatiques ?",a:"Tous les mois."},
+ {tag:"1ers S",q:"99 — Qu'est-ce qu'un arrêt cardiaque ?",a:"Le cœur ne fonctionne plus ou fonctionne d'une façon anarchique."}
+]},
+{num:"00",qs:[
+ {tag:"VE",q:"Montrez où se situent les gicleurs de lave-glace avant ?",a:"(Le candidat montre l'emplacement des gicleurs sur le capot ou le pare-brise.)"},
+ {tag:"QSER",q:"Quelle est la principale conséquence d'un dispositif de lave-glace défaillant ?",a:"Une mauvaise visibilité due à l'impossibilité de nettoyer le pare-brise."},
+ {tag:"1ers S",q:"00 — Qu'est-ce qu'un défibrillateur automatisé externe (DAE) ?",a:"C'est un appareil qui peut permettre de rétablir une activité cardiaque normale à une victime en arrêt cardiaque."}
+]}
+];
+
+// ── STATE ────────────────────────────────────────────────────
+let idx=0, flipped=false, totalScore=0;
+let counts={facile:0,bon:0,difficile:0,encore:0};
+const MAX_PTS = blocks.length * 4;
+
+const tagClass = t => t==='QSER'?'t-qser':t==='1ers S'?'t-sec':'t-vi';
+
+function renderCard(){
+  const b = blocks[idx];
+  const txt = `Bloc ${b.num} — ${idx+1}/${blocks.length}`;
+  document.getElementById('cardCounter').textContent = txt;
+  document.getElementById('cardCounterBack').textContent = txt;
+  document.getElementById('hdrIdx').textContent = idx+1;
+  document.getElementById('hdrTotal').textContent = blocks.length;
+  document.getElementById('hdrScore').textContent = totalScore;
+  document.getElementById('progFill').style.width = (idx/blocks.length*100)+'%';
+
+  // front
+  let fHtml='';
+  b.qs.forEach(q=>{
+    fHtml+=`<div class="q-row"><span class="q-tag ${tagClass(q.tag)}">${q.tag}</span><div class="q-text">${q.q}</div></div>`;
+  });
+  document.getElementById('frontQuestions').innerHTML=fHtml;
+
+  // back
+  let bHtml='';
+  b.qs.forEach((q,i)=>{
+    if(i>0) bHtml+='<div class="a-divider"></div>';
+    bHtml+=`<div class="a-block"><span class="a-tag ${tagClass(q.tag)}">${q.tag}</span><div class="a-q">${q.q}</div><div class="a-text">${q.a.replace(/\n/g,'<br>')}</div></div>`;
+  });
+  document.getElementById('backAnswers').innerHTML=bHtml;
+
+  flipped=false;
+  document.getElementById('theCard').classList.remove('flipped');
+  lockButtons(true);
+}
+
+function flipCard(){
+  if(flipped) return;
+  flipped=true;
+  document.getElementById('theCard').classList.add('flipped');
+  lockButtons(false);
+}
+
+function lockButtons(locked){
+  ['btnEncore','btnDifficile','btnBon','btnFacile'].forEach(id=>{
+    document.getElementById(id).classList.toggle('active',!locked);
+  });
+}
+
+function judge(pts,key){
+  totalScore+=pts; counts[key]++;
+  document.getElementById('hdrScore').textContent=totalScore;
+  idx++;
+  if(idx>=blocks.length) showResult();
+  else renderCard();
+}
+
+function startDeck(){
+  idx=0;flipped=false;totalScore=0;counts={facile:0,bon:0,difficile:0,encore:0};
+  document.getElementById('introScreen').style.display='none';
+  document.getElementById('hdr').style.display='flex';
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('deckScreen').style.display='flex';
+  renderCard();
+}
+
+function showResult(){
+  document.getElementById('deckScreen').style.display='none';
+  document.getElementById('progFill').style.width='100%';
+  const rs=document.getElementById('resultScreen');
+  rs.classList.add('show');
+  const pct=Math.round(totalScore/MAX_PTS*100);
+  const c=document.getElementById('resultCircle');
+  const good=pct>=70;
+  c.style.cssText=`width:120px;height:120px;border-radius:50%;border:3px solid ${good?'var(--easy)':'var(--again)'};background:${good?'rgba(90,181,90,.12)':'rgba(217,79,61,.10)'};display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+  c.innerHTML=`<div style="font-size:34px;font-weight:700;color:${good?'var(--easy)':'var(--again)'}">${pct}%</div><div style="font-size:12px;color:var(--muted)">score</div>`;
+  document.getElementById('resultTitle').textContent=pct>=90?'🏆 Excellent !':pct>=70?'✅ Bien joué !':'📚 Continue !';
+  document.getElementById('resultSub').textContent=`${totalScore} pts sur ${MAX_PTS} — ${blocks.length} blocs`;
+  document.getElementById('resEasy').textContent=counts.facile;
+  document.getElementById('resGood').textContent=counts.bon;
+  document.getElementById('resHard').textContent=counts.difficile;
+  document.getElementById('resAgain').textContent=counts.encore;
+}
+
+function restart(){
+  document.getElementById('resultScreen').classList.remove('show');
+  startDeck();
+}
+</script>
+</body>
+</html>
